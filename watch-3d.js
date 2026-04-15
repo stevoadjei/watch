@@ -20,12 +20,13 @@ function initThree() {
   }
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b1020);
+  scene.background = new THREE.Color(0x000000);
 
   const width = container.clientWidth || window.innerWidth;
   const height = container.clientHeight || window.innerHeight;
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-  camera.position.set(0, 0, 3.2);
+  camera.position.set(0, 0.5, 2.5);
+  camera.lookAt(0, 0, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio || 1);
@@ -34,16 +35,13 @@ function initThree() {
   container.innerHTML = '';
   container.appendChild(renderer.domElement);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
-  scene.add(ambientLight);
+  const light1 = new THREE.DirectionalLight(0xffffff, 1);
+  light1.position.set(5, 5, 5);
+  scene.add(light1);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  directionalLight.position.set(2, 3, 4);
-  scene.add(directionalLight);
-
-  const fillLight = new THREE.PointLight(0x99caff, 0.4, 10);
-  fillLight.position.set(-3, -2, 2);
-  scene.add(fillLight);
+  const light2 = new THREE.DirectionalLight(0xffffff, 0.5);
+  light2.position.set(-5, -5, -5);
+  scene.add(light2);
 
   const loader = new THREE.TextureLoader();
   const textureUrls = ['/watch-image.png', 'watch-image.png'];
@@ -67,6 +65,8 @@ function initThree() {
         if (texture && texture.image) {
           console.log('✅ Texture loaded:', texture.image.src, texture.image.width, 'x', texture.image.height);
           setStatus('Watch texture loaded successfully. Rotate to inspect.');
+          texture.center.set(0.5, 0.5);
+          texture.rotation = 0;
         }
         texture.encoding = THREE.sRGBEncoding;
         texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -107,8 +107,8 @@ function initThree() {
 }
 
 function createWatchModel(texture) {
-  const radius = 1.04;
-  const depth = 0.18;
+  const radius = 1;
+  const depth = 0.08;
   const segments = 96;
   const model = new THREE.Group();
 

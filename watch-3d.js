@@ -1,172 +1,222 @@
-console.log('3D Watch Viewer Loaded');
+// 3D Watch Viewer - Render the watch image as a textured 3D object
+console.log('1️⃣ watch-3d.js LOADED');
+console.log('   THREE available?', typeof THREE !== 'undefined');
+console.log('   OrbitControls available?', typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined');
 
 const container = document.getElementById('watch-container');
+const statusText = document.getElementById('debug-status');
 let scene, camera, renderer, controls, watchMesh;
 
+function setStatus(message) {
+  if (statusText) statusText.textContent = message;
+}
+
 function initThree() {
-  if (!container) return;
+  console.log('Container size:', container?.clientWidth, container?.clientHeight);
+  setStatus('Initializing 3D watch viewer...');
+  if (!container) {
+    console.error('❌ No watch container found');
+    return;
+  }
 
-  // Scene
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(0x0b1020);
 
-  // Camera
-  const width = container.clientWidth;
-  const height = container.clientHeight;
-
+  const width = container.clientWidth || window.innerWidth;
+  const height = container.clientHeight || window.innerHeight;
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-  camera.position.set(0, 0.6, 2.5);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(0, 0, 3.2);
 
-  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.setSize(width, height);
-  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.outputEncoding = THREE.sRGBEncoding;
-
   container.innerHTML = '';
   container.appendChild(renderer.domElement);
 
-  // Lighting (clean + premium look)
-  const light1 = new THREE.DirectionalLight(0xffffff, 1);
-  light1.position.set(5, 5, 5);
-  scene.add(light1);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+  scene.add(ambientLight);
 
-  const light2 = new THREE.DirectionalLight(0xffffff, 0.5);
-  light2.position.set(-5, -5, -5);
-  scene.add(light2);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(2, 3, 4);
+  scene.add(directionalLight);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.3);
-  scene.add(ambient);
+  const fillLight = new THREE.PointLight(0x99caff, 0.4, 10);
+  fillLight.position.set(-3, -2, 2);
+  scene.add(fillLight);
 
-  // Load texture
   const loader = new THREE.TextureLoader();
-  loader.load(
-    '/watch-image.png',
-    (texture) => {
-      texture.encoding = THREE.sRGBEncoding;
-      texture.center.set(0.5, 0.5);
-      texture.rotation = 0;
+  const textureUrls = ['/watch-image.png', 'watch-image.png'];
+  setStatus('Loading watch texture...');
 
-      createWatchModel(texture);
+  function tryLoad(index) {
+    if (index >= textureUrls.length) {
+      console.warn('⚠️ All texture URLs failed. Using fallback model.');
+      setStatus('Watch texture failed to load. Showing fallback model.');
+      createWatchModel();
       animate();
-    },
-    undefined,
-    () => {
-      // fallback if image fails
-      createWatchModel(null);
-      animate();
+      return;
     }
-  );
 
-  // Controls
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.enablePan = false;
-  controls.minDistance = 1.8;
-  controls.maxDistance = 4;
-  controls.target.set(0, 0, 0);
+    const url = textureUrls[index];
+    console.log('⏳ Trying texture URL:', url);
 
-  window.addEventListener('resize', onResize);
+    loader.load(
+      url,
+      (texture) => {
+        if (texture && texture.image) {
+          console.log('✅ Texture loaded:', texture.image.src, texture.image.width, 'x', texture.image.height);
+          setStatus('Watch texture loaded successfully. Rotate to inspect.');
+        }
+        texture.encoding = THREE.sRGBEncoding;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.minFilter = THREE.LinearMipMapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        createWatchModel(texture);
+        animate();
+      },
+      undefined,
+      (err) => {
+        console.warn('⚠️ Texture load failed for', url, err);
+        tryLoad(index + 1);
+      }
+    );
+  }
+
+  tryLoad(0);
+
+  if (typeof THREE.OrbitControls !== 'undefined') {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.minDistance = 1.6;
+    controls.maxDistance = 8;
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI - 0.05;
+    controls.rotateSpeed = 1.2;
+    controls.target.set(0, 0, 0);
+    controls.update();
+  } else {
+    console.warn('⚠️ OrbitControls is not available');
+  }
+
+  window.addEventListener('resize', onWindowResize);
 }
 
 function createWatchModel(texture) {
-  const radius = 1;
-  const depth = 0.08;
-  const segments = 100;
-
+  const radius = 1.04;
+  const depth = 0.18;
+  const segments = 96;
   const model = new THREE.Group();
 
-  // Watch case
-  const caseMat = new THREE.MeshStandardMaterial({
-    color: 0x222222,
-    metalness: 0.9,
-    roughness: 0.2
+  const sideMaterial = new THREE.MeshStandardMaterial({
+    color: 0x293048,
+    roughness: 0.2,
+    metalness: 0.95,
   });
 
-  const caseMesh = new THREE.Mesh(
+  const watchCase = new THREE.Mesh(
     new THREE.CylinderGeometry(radius, radius, depth, segments, 1, true),
-    caseMat
+    sideMaterial
   );
-  model.add(caseMesh);
+  model.add(watchCase);
 
-  // Face
-  const faceMat = new THREE.MeshStandardMaterial({
+  const faceMaterial = new THREE.MeshStandardMaterial({
     map: texture || null,
-    color: texture ? 0xffffff : 0x444444,
-    metalness: 0.2,
-    roughness: 0.3
+    color: texture ? 0xffffff : 0xff0000,
+    roughness: 0.28,
+    metalness: 0.12,
+    side: THREE.DoubleSide,
   });
 
-  const face = new THREE.Mesh(
-    new THREE.CircleGeometry(radius * 0.95, segments),
-    faceMat
+  const topFace = new THREE.Mesh(
+    new THREE.CircleGeometry(radius * 0.96, segments),
+    faceMaterial
   );
-  face.rotation.x = -Math.PI / 2;
-  face.position.y = depth / 2 + 0.001;
-  model.add(face);
+  topFace.rotation.x = -Math.PI / 2;
+  topFace.position.y = depth / 2 + 0.001;
+  model.add(topFace);
 
-  // Back
-  const back = new THREE.Mesh(
-    new THREE.CircleGeometry(radius * 0.95, segments),
-    new THREE.MeshStandardMaterial({ color: 0x111111 })
+  const backMaterial = new THREE.MeshStandardMaterial({
+    color: 0x11141c,
+    roughness: 0.7,
+    metalness: 0.05,
+    side: THREE.DoubleSide,
+  });
+
+  const backFace = new THREE.Mesh(
+    new THREE.CircleGeometry(radius * 0.96, segments),
+    backMaterial
   );
-  back.rotation.x = Math.PI / 2;
-  back.position.y = -depth / 2;
-  model.add(back);
+  backFace.rotation.x = Math.PI / 2;
+  backFace.position.y = -depth / 2 - 0.001;
+  model.add(backFace);
 
-  // Bezel (gold ring)
   const bezel = new THREE.Mesh(
-    new THREE.TorusGeometry(radius + 0.03, 0.04, 20, 100),
-    new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      metalness: 1,
-      roughness: 0.2
-    })
+    new THREE.TorusGeometry(radius + 0.04, 0.05, 24, 160),
+    new THREE.MeshStandardMaterial({ color: 0xdbb23f, roughness: 0.18, metalness: 0.95 })
   );
   bezel.rotation.x = Math.PI / 2;
-  bezel.position.y = depth / 2 + 0.005;
+  bezel.position.y = depth / 2 + 0.007;
   model.add(bezel);
 
-  // Crown
   const crown = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      metalness: 1,
-      roughness: 0.2
-    })
+    new THREE.CylinderGeometry(0.065, 0.065, 0.12, 32),
+    new THREE.MeshStandardMaterial({ color: 0xdbb23f, roughness: 0.15, metalness: 0.95 })
   );
   crown.rotation.z = Math.PI / 2;
-  crown.position.set(radius + 0.08, 0, 0);
+  crown.position.set(radius + 0.095, 0, 0);
   model.add(crown);
 
-  // Slight tilt for realism
-  model.rotation.x = -0.1;
-  model.rotation.y = 0.3;
+  const lugMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1b2030,
+    roughness: 0.3,
+    metalness: 0.9,
+  });
+
+  const strapTop = new THREE.Mesh(
+    new THREE.BoxGeometry(0.36, 0.12, 0.16),
+    lugMaterial
+  );
+  strapTop.position.set(0, radius + 0.08, -0.02);
+  model.add(strapTop);
+
+  const strapBottom = strapTop.clone();
+  strapBottom.position.set(0, -radius - 0.08, -0.02);
+  model.add(strapBottom);
 
   watchMesh = model;
+  watchMesh.rotation.x = -0.08;
+  watchMesh.rotation.y = 0.28;
   scene.add(watchMesh);
 }
 
 function animate() {
   requestAnimationFrame(animate);
-  controls.update();
+  if (controls) controls.update();
   renderer.render(scene, camera);
 }
 
-function onResize() {
-  const width = container.clientWidth;
-  const height = container.clientHeight;
-
+function onWindowResize() {
+  const width = container.clientWidth || window.innerWidth;
+  const height = container.clientHeight || window.innerHeight;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
 }
 
-// Init
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initThree);
+if (typeof THREE === 'undefined') {
+  console.error('❌ THREE.js is not loaded.');
 } else {
-  initThree();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initThree);
+  } else {
+    initThree();
+  }
 }
+
+console.log('🎯 3D watch viewer initialized');
+

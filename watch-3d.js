@@ -79,7 +79,9 @@ function initThree() {
     controls.enablePan = false;
     controls.minDistance = 1.6;
     controls.maxDistance = 8;
-    controls.maxPolarAngle = Math.PI * 0.45;
+    controls.minPolarAngle = 0.08;
+    controls.maxPolarAngle = Math.PI * 0.95;
+    controls.rotateSpeed = 0.9;
     controls.target.set(0, 0, 0);
     controls.update();
   } else {
@@ -90,52 +92,75 @@ function initThree() {
 }
 
 function createWatchModel(texture) {
-  const width = 1.75;
-  const height = 2.0;
-  const depth = 0.14;
+  const radius = 1.04;
+  const depth = 0.18;
+  const segments = 96;
 
-  const geometry = new THREE.BoxGeometry(width, height, depth, 32, 32, 2);
+  const caseGeometry = new THREE.CylinderGeometry(radius, radius, depth, segments, 1, false);
   const faceMaterial = new THREE.MeshStandardMaterial({
     map: texture || null,
     color: texture ? 0xffffff : 0xdddddd,
-    roughness: 0.35,
-    metalness: 0.15,
-  });
-
-  const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: 0x181c26,
     roughness: 0.28,
-    metalness: 0.85,
+    metalness: 0.12,
   });
 
-  const materials = [
-    bodyMaterial,
-    bodyMaterial,
-    bodyMaterial,
-    bodyMaterial,
-    faceMaterial,
-    faceMaterial,
-  ];
+  const backMaterial = new THREE.MeshStandardMaterial({
+    color: 0x11141c,
+    roughness: 0.7,
+    metalness: 0.05,
+  });
 
-  watchMesh = new THREE.Mesh(geometry, materials);
+  const sideMaterial = new THREE.MeshStandardMaterial({
+    color: 0x293048,
+    roughness: 0.2,
+    metalness: 0.95,
+  });
+
+  const materials = [faceMaterial, backMaterial, sideMaterial];
+  watchMesh = new THREE.Mesh(caseGeometry, materials);
   watchMesh.rotation.x = -0.08;
   watchMesh.rotation.y = 0.28;
   scene.add(watchMesh);
 
-  const edge = new THREE.EdgesGeometry(geometry);
-  const edgeLines = new THREE.LineSegments(
-    edge,
-    new THREE.LineBasicMaterial({ color: 0x77b7ff, transparent: true, opacity: 0.25 })
-  );
-  watchMesh.add(edgeLines);
-
   const bezel = new THREE.Mesh(
-    new THREE.TorusGeometry(0.95, 0.05, 24, 120),
-    new THREE.MeshStandardMaterial({ color: 0x4c5e84, roughness: 0.15, metalness: 0.9 })
+    new THREE.TorusGeometry(radius + 0.045, 0.055, 24, 160),
+    new THREE.MeshStandardMaterial({ color: 0xdbb23f, roughness: 0.18, metalness: 0.95 })
   );
   bezel.rotation.x = Math.PI / 2;
-  bezel.position.z = depth / 2 + 0.015;
+  bezel.position.z = depth / 2 + 0.005;
   watchMesh.add(bezel);
+
+  const crown = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.07, 0.14, 24),
+    new THREE.MeshStandardMaterial({ color: 0xdbb23f, roughness: 0.15, metalness: 0.95 })
+  );
+  crown.rotation.z = Math.PI / 2;
+  crown.position.set(radius + 0.09, 0, 0);
+  watchMesh.add(crown);
+
+  const lugMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1b2030,
+    roughness: 0.3,
+    metalness: 0.9,
+  });
+
+  const strapTop = new THREE.Mesh(
+    new THREE.BoxGeometry(0.36, 0.12, 0.16),
+    lugMaterial
+  );
+  strapTop.position.set(0, radius + 0.08, -0.03);
+  watchMesh.add(strapTop);
+
+  const strapBottom = strapTop.clone();
+  strapBottom.position.set(0, -radius - 0.08, -0.03);
+  watchMesh.add(strapBottom);
+
+  const edge = new THREE.EdgesGeometry(caseGeometry);
+  const edgeLines = new THREE.LineSegments(
+    edge,
+    new THREE.LineBasicMaterial({ color: 0x78b8ff, transparent: true, opacity: 0.22 })
+  );
+  watchMesh.add(edgeLines);
 }
 
 function animate() {

@@ -3,34 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Caveman Boutique | 3D Configurator</title>
+    <title>Caveman Premium Configurator</title>
     <style>
-        :root { --gold: #d4b265; --dark: #050505; }
-        body {
-            margin: 0; background-color: var(--dark);
-            color: white; font-family: 'Segoe UI', sans-serif;
-            display: flex; flex-direction: column; align-items: center;
+        body { margin: 0; background-color: #050505; color: white; font-family: 'Georgia', serif; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; cursor: grab; }
+        #canvas-container:active { cursor: grabbing; }
+        
+        .ui-overlay {
+            position: absolute; top: 40px; width: 100%; text-align: center;
+            pointer-events: none; text-transform: uppercase; letter-spacing: 5px;
         }
-        #viewer-wrapper {
-            position: relative; width: 100vw; height: 85vh;
-            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
-        }
-        #watch-container { width: 100%; height: 100%; }
-        .controls-hint {
-            position: absolute; bottom: 30px; width: 100%; text-align: center;
-            color: var(--gold); letter-spacing: 2px; font-size: 12px; text-transform: uppercase;
-            pointer-events: none; opacity: 0.6;
+        .loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; justify-content: center; align-items: center;
+            z-index: 100; transition: opacity 0.5s;
         }
     </style>
 </head>
 <body>
-    <div id="viewer-wrapper">
-        <div id="watch-container"></div>
-        <div class="controls-hint">Drag to Rotate • Scroll to Zoom</div>
+    <div id="loading" class="loading-screen">BUILDING VALUE...</div>
+    <div class="ui-overlay">
+        <h1 style="font-weight: 300; font-size: 1.2rem;">Caveman Watches</h1>
+        <p style="font-size: 0.7rem; color: #d4b265;">Personalization Engine v1.0</p>
     </div>
+    <div id="canvas-container"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.146.0/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="watch-3d.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </body>
 </html>

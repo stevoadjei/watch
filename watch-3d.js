@@ -275,6 +275,49 @@ function createWatchModel(dialTexture) {
 
   scene.add(watchGroup);
 }
+// ===== HANDS GROUP =====
+const handsGroup = new THREE.Group();
+
+// Materials
+const handMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd4b265,
+  metalness: 1.0,
+  roughness: 0.25
+});
+
+// Minute hand (longer)
+const minuteHand = new THREE.Mesh(
+  new THREE.BoxGeometry(0.03, radius * 0.85, 0.04),
+  handMaterial
+);
+minuteHand.position.set(0, 0, depth / 2 + 0.015);
+minuteHand.geometry.translate(0, radius * 0.42, 0); // pivot at center
+handsGroup.add(minuteHand);
+
+// Hour hand (shorter)
+const hourHand = new THREE.Mesh(
+  new THREE.BoxGeometry(0.04, radius * 0.55, 0.05),
+  handMaterial
+);
+hourHand.position.set(0, 0, depth / 2 + 0.02);
+hourHand.geometry.translate(0, radius * 0.28, 0);
+handsGroup.add(hourHand);
+
+// Center cap
+const cap = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.06, 0.06, 0.04, 32),
+  handMaterial
+);
+cap.rotation.x = Math.PI / 2;
+cap.position.set(0, 0, depth / 2 + 0.025);
+handsGroup.add(cap);
+
+// Add to watch
+watchGroup.add(handsGroup);
+
+// Optional: slight default rotation
+hourHand.rotation.z = -Math.PI / 3;
+minuteHand.rotation.z = -Math.PI / 1.5;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -289,6 +332,26 @@ function onWindowResize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+}
+function loadGLBModel(path) {
+  const loader = new THREE.GLTFLoader();
+
+  loader.load(
+    path,
+    (gltf) => {
+      const model = gltf.scene;
+      model.scale.set(1.4, 1.4, 1.4);
+      model.position.set(0, 0, 0);
+      model.rotation.x = -0.2;
+
+      // Remove procedural model if present
+      if (watchGroup) scene.remove(watchGroup);
+
+      scene.add(model);
+    },
+    undefined,
+    (err) => console.error("Failed to load GLB:", err)
+  );
 }
 
 // Boot
